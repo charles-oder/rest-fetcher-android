@@ -4,9 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RestApiBase {
-
-    private static final String TAG = RestApiBase.class.getSimpleName();
-
+    
     public static final String CONTENT_TYPE_KEY = "Content-Type";
     public static final String ACCEPT_KEY = "Accept";
 
@@ -21,12 +19,25 @@ public class RestApiBase {
         void onApiSuccess( T response );
     }
 
+    public interface IRestFetcherFactory {
+        RestFetcher createRestFetcher(String url, RestMethod method, Map<String, String> headers, String body);
+    }
+
     public static abstract class Request<T extends Response> implements RestFetcher.OnFetchErrorListener, RestFetcher.OnFetchSuccessListener {
 
-        public RestFetcher fetcher;
+        private RestFetcher fetcher;
+        private IRestFetcherFactory restFetcherFactory;
 
         private OnApiSuccessListener<T> onApiSuccessListener;
         private OnApiErrorListener onApiErrorListener;
+
+        public Request() {
+            this(new RestFetcherFactory());
+        }
+
+        public Request(IRestFetcherFactory restFetcherFactory) {
+            this.restFetcherFactory = restFetcherFactory;
+        }
 
         protected abstract String getApiRoute();
 
@@ -79,7 +90,7 @@ public class RestApiBase {
         }
 
         public void prepare() {
-            fetcher = new RestFetcher( getApiResource(), getRestMethod(), getHeaders(), getRequestBody() );
+            fetcher = restFetcherFactory.createRestFetcher( getApiResource(), getRestMethod(), getHeaders(), getRequestBody() );
             fetcher.onFetchErrorListener = this;
             fetcher.onFetchSuccessListener = this;
         }
@@ -118,6 +129,14 @@ public class RestApiBase {
         }
 
         protected void processResponse(RestResponse response){
+        }
+    }
+
+    private static class RestFetcherFactory implements IRestFetcherFactory {
+
+        @Override
+        public RestFetcher createRestFetcher(String url, RestMethod method, Map<String, String> headers, String body) {
+            return new RestFetcher( url, method, headers, body );
         }
     }
 

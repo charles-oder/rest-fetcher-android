@@ -22,6 +22,10 @@ import static org.mockito.Mockito.verify;
 public class RestApiBaseTest {
 
     RestApiBase.Request<RestApiBase.Response> testObject;
+    private String lastRequestUrl;
+    private RestMethod lastRequestMethod;
+    private Map<String, String> lastRequestHeaders;
+    private String lastRequestBody;
 
     @Mock
     RestFetcher mockRestFetcher;
@@ -32,7 +36,23 @@ public class RestApiBaseTest {
     @Mock
     RestApiBase.OnApiSuccessListener<RestApiBase.Response> mockOnApiSuccessListener;
 
+    class MockRestFetcherFactory implements RestApiBase.IRestFetcherFactory {
+
+        @Override
+        public RestFetcher createRestFetcher( String url, RestMethod method, Map<String, String> headers, String body ) {
+            lastRequestUrl = url;
+            lastRequestMethod = method;
+            lastRequestHeaders = headers;
+            lastRequestBody = body;
+            return mockRestFetcher;
+        }
+    }
+
     class ConcreteApiRequest extends RestApiBase.Request<RestApiBase.Response> {
+
+        public ConcreteApiRequest(RestApiBase.IRestFetcherFactory restFetcherFactory) {
+            super(restFetcherFactory);
+        }
 
         @Override
         protected String getApiBaseAddress() {
@@ -48,7 +68,12 @@ public class RestApiBaseTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks( this );
-        testObject = new ConcreteApiRequest();
+        lastRequestUrl = null;
+        lastRequestMethod = null;
+        lastRequestHeaders = null;
+        lastRequestBody = null;
+
+        testObject = new ConcreteApiRequest(new MockRestFetcherFactory());
     }
 
     @Test
@@ -68,29 +93,28 @@ public class RestApiBaseTest {
         RestMethod expectedMethod = RestMethod.GET;
         Map<String, String> expectedHeaders = new HashMap<>();
         expectedHeaders.put("Content-Type", "application/json");
-        expectedHeaders.put("Accept","application/json; version=1");
+        expectedHeaders.put( "Accept", "application/json; version=1" );
         String expectedBody = "";
 
         testObject.prepare();
 
-        assertEquals( expectedUrl, testObject.fetcher.getUrl() );
-        assertEquals( expectedMethod, testObject.fetcher.getMethod() );
+        assertEquals( expectedUrl, lastRequestUrl );
+        assertEquals( expectedMethod, lastRequestMethod );
         for (String key : expectedHeaders.keySet()) {
-            assertEquals(expectedHeaders.get(key), testObject.fetcher.getHeaders().get(key));
+            assertEquals(expectedHeaders.get(key), lastRequestHeaders.get(key));
         }
-        assertEquals( expectedBody, testObject.fetcher.getBody() );
+        assertEquals( expectedBody, lastRequestBody );
     }
 
     @Test
     public void getFetcherCreatesNewFetcher() {
-        assertNull(testObject.fetcher);
+        assertNull(lastRequestUrl);
         assertNotNull( testObject.getFetcher() );
-        assertNotNull( testObject.fetcher );
+        assertNotNull( lastRequestUrl );
     }
 
     @Test
     public void fetchExecutesRestFetcher() {
-        testObject.fetcher = mockRestFetcher;
         testObject.fetch();
 
         verify(mockRestFetcher).fetch();
@@ -98,7 +122,6 @@ public class RestApiBaseTest {
 
     @Test
     public void fetchAsyncExecutesRestFetcher() {
-        testObject.fetcher = mockRestFetcher;
         testObject.fetchAsync();
 
         verify(mockRestFetcher).fetchAsync();
@@ -115,7 +138,6 @@ public class RestApiBaseTest {
                 return null;
             }
         }).when(mockRestFetcher).fetch();
-        testObject.fetcher = mockRestFetcher;
         testObject.setOnApiErrorListener(mockOnApiErrorListener);
         testObject.fetch();
 
@@ -146,7 +168,6 @@ public class RestApiBaseTest {
                 return null;
             }
         }).when(mockRestFetcher).fetch();
-        testObject.fetcher = mockRestFetcher;
         testObject.setOnApiSuccessListener(mockOnApiSuccessListener);
         testObject.fetch();
 
