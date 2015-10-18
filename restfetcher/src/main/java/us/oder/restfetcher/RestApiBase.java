@@ -13,9 +13,6 @@ public class RestApiBase {
     public static final String DEFAULT_CONTENT_TYPE = "application/json";
     public static final String DEFAULT_ACCEPT = "application/json; version=1";
 
-    private static RestMethod defaultBaseRestMethod = RestMethod.GET;
-    private static String defaultRequestBody = "";
-
     public interface OnApiErrorListener {
         void onApiError( RestError error );
     }
@@ -25,6 +22,15 @@ public class RestApiBase {
     }
 
     public static abstract class Request<T extends Response> implements RestFetcher.OnFetchErrorListener, RestFetcher.OnFetchSuccessListener {
+
+        public RestFetcher fetcher;
+
+        private OnApiSuccessListener<T> onApiSuccessListener;
+        private OnApiErrorListener onApiErrorListener;
+
+        protected abstract String getApiRoute();
+
+        protected abstract String getApiBaseAddress();
 
         public OnApiSuccessListener<T> getOnApiSuccessListener() {
             return onApiSuccessListener;
@@ -42,31 +48,34 @@ public class RestApiBase {
             this.onApiErrorListener = onApiErrorListener;
         }
 
-        public RestFetcher fetcher;
-        private OnApiSuccessListener<T> onApiSuccessListener;
-        private OnApiErrorListener onApiErrorListener;
-
         public String getRequestBody() {
-            return defaultRequestBody;
+            return "";
         }
 
         protected String getApiResource() {
             return getApiBaseAddress() + getApiRoute();
         }
 
-        protected abstract String getApiRoute();
-
-        protected abstract String getApiBaseAddress();
-
-        public RestMethod getRestMethod() {
-            return defaultBaseRestMethod;
+        protected RestMethod getRestMethod() {
+            return RestMethod.GET;
         }
 
-        public Map<String, String> getHeaders() {
+        protected Map<String, String> getHeaders() {
             Map<String, String> headers = new HashMap<>();
             headers.put(CONTENT_TYPE_KEY, DEFAULT_CONTENT_TYPE);
             headers.put(ACCEPT_KEY, DEFAULT_ACCEPT);
             return headers;
+        }
+
+        protected RestFetcher getFetcher() {
+            if ( fetcher == null ) {
+                prepare();
+            }
+            return fetcher;
+        }
+
+        protected T createApiResponse( RestResponse response ) {
+            return (T) new Response(response ); // must cast our default impelementation
         }
 
         public void prepare() {
@@ -81,17 +90,6 @@ public class RestApiBase {
 
         public void fetchAsync() {
             getFetcher().fetchAsync();
-        }
-
-        public RestFetcher getFetcher() {
-            if ( fetcher == null ) {
-                prepare();
-            }
-            return fetcher;
-        }
-
-        public T createApiResponse( RestResponse response ) {
-            return (T) new Response(response ); // must cast our default impelementation
         }
 
         @Override

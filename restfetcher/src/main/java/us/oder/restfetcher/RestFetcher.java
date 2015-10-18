@@ -19,27 +19,13 @@ import java.util.Map;
 import us.oder.restfetcher.util.JsonScrubber;
 
 public class RestFetcher {
+
+    private static final String[] FIELDS_TO_SCRUB = new String[]{"password", "username"};
     private static final String TAG = RestFetcher.class.getSimpleName();
-    public static final String[] FIELDS_TO_SCRUB = new String[]{"password", "username"};
+
     private final IConnectionFactory connectionFactory;
 
-    public interface IConnectionFactory {
-        URLConnection createHttpURLConnection(String url) throws IOException;
-    }
-
-    public static class ConnectionFactory implements IConnectionFactory {
-        @Override
-        public URLConnection createHttpURLConnection( String url ) throws IOException {
-            URL u = new URL( url );
-            HttpURLConnection conn = (HttpURLConnection) u.openConnection();
-            conn.setReadTimeout( 10000 );
-            conn.setConnectTimeout( 15000 );
-            return conn;
-        }
-    }
-
     private String url;
-
     private Map<String, String> headers;
     private RestMethod method;
     private String body;
@@ -50,28 +36,16 @@ public class RestFetcher {
         return url;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public RestMethod getMethod() {
+        return method;
     }
 
     public Map<String, String> getHeaders() {
         return headers;
     }
 
-    public RestMethod getMethod() {
-        return method;
-    }
-
-    public void setMethod(RestMethod method) {
-        this.method = method;
-    }
-
     public String getBody() {
         return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
     }
 
     public interface OnFetchErrorListener {
@@ -87,21 +61,11 @@ public class RestFetcher {
     }
 
     public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body, IConnectionFactory factory ) {
-        this.setUrl(url);
-        this.setHeaders( headers );
-        this.setMethod( method );
-        this.setBody( body );
-        this.connectionFactory = factory;
-    }
-
-    public void setHeaders(Map<String, String> headers) {
+        this.url = url;
         this.headers = headers;
-    }
-
-    public void fetch() {
-        RestResponse restResponse = performRequest();
-        processRestResponse( restResponse );
-
+        this.method = method;
+        this.body = body;
+        this.connectionFactory = factory;
     }
 
     private void processRestResponse(RestResponse restResponse) {
@@ -112,27 +76,12 @@ public class RestFetcher {
         }
     }
 
-    protected void sendResponse(RestResponse restResponse) {
+    private void sendResponse(RestResponse restResponse) {
         if (restResponse.code > 199 && restResponse.code < 300) {
             sendSuccess( restResponse );
         } else {
             sendError( new RestError( restResponse.code, restResponse.body ) );
         }
-    }
-
-    public void fetchAsync() {
-        new AsyncTask<Void, Void, RestResponse>() {
-
-            @Override
-            protected RestResponse doInBackground(Void... params) {
-                return performRequest();
-            }
-
-            @Override
-            protected void onPostExecute(RestResponse restResponse) {
-                processRestResponse(restResponse);
-            }
-        }.execute();
     }
 
     private RestResponse performRequest() {
@@ -192,25 +141,25 @@ public class RestFetcher {
     }
 
 
-    public HttpURLConnection establishConnection() throws IOException {
+    private HttpURLConnection establishConnection() throws IOException {
         HttpURLConnection output;
-        if (getMethod() == RestMethod.POST || getMethod() == RestMethod.PUT) {
-            output = createBodyConnection( getMethod() );
+        if (method == RestMethod.POST || method == RestMethod.PUT) {
+            output = createBodyConnection( method );
         } else {
-            output = createConnection( getMethod() );
+            output = createConnection( method );
         }
         return output;
     }
 
     private HttpURLConnection createConnection( RestMethod method ) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection)connectionFactory.createHttpURLConnection(getUrl());
+        HttpURLConnection conn = (HttpURLConnection)connectionFactory.createHttpURLConnection(url);
         conn.setRequestMethod( method.toString() );
         injectHeaders( conn );
         return conn;
     }
 
     private HttpURLConnection createBodyConnection( RestMethod method ) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection)connectionFactory.createHttpURLConnection( getUrl() );
+        HttpURLConnection conn = (HttpURLConnection)connectionFactory.createHttpURLConnection( url );
         conn.setRequestMethod( method.toString() );
         injectHeaders( conn );
         writeBody( conn );
@@ -220,29 +169,29 @@ public class RestFetcher {
     private void writeBody( HttpURLConnection conn ) throws IOException {
         conn.setDoOutput( true );
         OutputStreamWriter writer = new OutputStreamWriter( conn.getOutputStream() );
-        writer.write( getBody() );
+        writer.write( body );
         writer.close();
     }
 
     private void injectHeaders( HttpURLConnection conn ) {
-        for (String key : getHeaders().keySet()) {
-            conn.setRequestProperty( key, getHeaders().get( key ) );
+        for (String key : headers.keySet()) {
+            conn.setRequestProperty( key, headers.get( key ) );
         }
     }
 
-    protected void logRequest() {
-        Log.d( TAG, "Request URL: " + getUrl() );
-        Log.d( TAG, "Request Method: " + getMethod() );
+    private void logRequest() {
+        Log.d( TAG, "Request URL: " + url );
+        Log.d( TAG, "Request Method: " + headers );
         String headerLog = "Request Headers: ";
-        for(String key : getHeaders().keySet()) {
-            headerLog += " | " + key + " : " + getHeaders().get(key);
+        for(String key : headers.keySet()) {
+            headerLog += " | " + key + " : " + headers.get( key );
         }
         Log.d( TAG, headerLog );
         JsonScrubber scrubber = new JsonScrubber(FIELDS_TO_SCRUB);
-        Log.d( TAG, "Request Body: " + scrubber.scrub( getBody() ) );
+        Log.d( TAG, "Request Body: " + scrubber.scrub( body ) );
     }
 
-    protected void logResponse(RestResponse response) {
+    private void logResponse(RestResponse response) {
         if (response != null) {
             Log.d( TAG, "Response Code: " + response.code );
             String headerLog = "Response Headers: ";
@@ -257,7 +206,26 @@ public class RestFetcher {
         }
     }
 
+    public void fetch() {
+        RestResponse restResponse = performRequest();
+        processRestResponse( restResponse );
 
+    }
+
+    public void fetchAsync() {
+        new AsyncTask<Void, Void, RestResponse>() {
+
+            @Override
+            protected RestResponse doInBackground(Void... params) {
+                return performRequest();
+            }
+
+            @Override
+            protected void onPostExecute(RestResponse restResponse) {
+                processRestResponse(restResponse);
+            }
+        }.execute();
+    }
 
     public static String convertInputStreamToString( InputStream inputStream ) throws IOException {
         String line;
@@ -278,5 +246,21 @@ public class RestFetcher {
         }
         return result.trim();
     }
+
+    public interface IConnectionFactory {
+        URLConnection createHttpURLConnection(String url) throws IOException;
+    }
+
+    public static class ConnectionFactory implements IConnectionFactory {
+        @Override
+        public URLConnection createHttpURLConnection( String url ) throws IOException {
+            URL u = new URL( url );
+            HttpURLConnection conn = (HttpURLConnection) u.openConnection();
+            conn.setReadTimeout( 10000 );
+            conn.setConnectTimeout( 15000 );
+            return conn;
+        }
+    }
+
 
 }
