@@ -1,5 +1,7 @@
 package us.oder.restfetcher;
 
+import android.os.Handler;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,6 +57,9 @@ public class RestFetcherTest {
     @Mock
     OutputStream mockOutputStream;
 
+
+    private Handler handler = new Handler();
+
     private int lastResponseCode;
     private String lastResponseBody;
     private Map<String, String> lastResponseHeaders;
@@ -93,6 +98,7 @@ public class RestFetcherTest {
         headers.put("sample", "header");
         body = "{}";
         InputStream stream = new ByteArrayInputStream(body.getBytes( "UTF-8" ));
+
     }
 
     private InputStream getMockInputStream(String str) {
@@ -106,7 +112,7 @@ public class RestFetcherTest {
 
     @Test
     public void makeGetRequest() throws IOException {
-        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
+        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
         mockResponseBody = "{\"cracker\":\"monkey\"}";
         when(mockHttpURLConnection.getInputStream()).thenReturn( getMockInputStream( mockResponseBody ) );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
@@ -132,7 +138,7 @@ public class RestFetcherTest {
     @Test
     public void makePostRequest() throws Exception {
         body = "{\"thing\":\"one\"}";
-        RestFetcher fetcher = new RestFetcher(url, RestMethod.POST, headers, body, mockConnectionFactory);
+        RestFetcher fetcher = new RestFetcher(url, RestMethod.POST, headers, body, mockConnectionFactory, handler );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -160,7 +166,7 @@ public class RestFetcherTest {
     @Test
     public void makePutRequest() throws Exception {
         body = "{\"thing\":\"one\"}";
-        RestFetcher fetcher = new RestFetcher(url, RestMethod.PUT, headers, body, mockConnectionFactory);
+        RestFetcher fetcher = new RestFetcher(url, RestMethod.PUT, headers, body, mockConnectionFactory, handler );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -187,7 +193,7 @@ public class RestFetcherTest {
 
     @Test
     public void makeDeleteRequest() throws Exception {
-        RestFetcher fetcher = new RestFetcher(url, RestMethod.DELETE, headers, body, mockConnectionFactory);
+        RestFetcher fetcher = new RestFetcher(url, RestMethod.DELETE, headers, body, mockConnectionFactory, handler );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -211,7 +217,7 @@ public class RestFetcherTest {
 
     @Test
     public void fetchErrorInvokesCallback() throws IOException {
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory);
+        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory, handler );
         restFetcher.onFetchErrorListener = mockOnFetchErrorListener;
         when(mockHttpURLConnection.getInputStream()).thenThrow(new IOException());
 
@@ -236,9 +242,9 @@ public class RestFetcherTest {
         final Map<String, String> expectedResponseHeaders = new HashMap<>();
         expectedResponseHeaders.put("crackers", "monkey");
 
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory);
+        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory, handler );
         restFetcher.onFetchSuccessListener = mockOnFetchSuccessListener;
-        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
+        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -262,7 +268,7 @@ public class RestFetcherTest {
 
     @Test
     public void fetchErrorDoesNotBombWithNoErrorListener() throws IOException {
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory);
+        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory, new Handler());
         when(mockHttpURLConnection.getInputStream()).thenThrow(new IOException());
 
         restFetcher.fetch();  // No exception expected
@@ -274,10 +280,9 @@ public class RestFetcherTest {
         when(mockHttpURLConnection.getInputStream()).thenReturn( getMockInputStream( mockResponseBody ) );
         when(mockHttpURLConnection.getResponseCode()).thenReturn( 400 );
 
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory);
 
 
-        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
+        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
         fetcher.onFetchErrorListener = new RestFetcher.OnFetchErrorListener() {
             @Override
             public void onFetchError( RestError error ) {

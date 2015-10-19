@@ -1,6 +1,7 @@
 package us.oder.restfetcher;
 
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -24,6 +25,7 @@ public class RestFetcher {
     private static final String TAG = RestFetcher.class.getSimpleName();
 
     private final IConnectionFactory connectionFactory;
+    private final Handler handler;
 
     private String url;
     private Map<String, String> headers;
@@ -57,15 +59,16 @@ public class RestFetcher {
     }
 
     public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body ) {
-        this( url, method, headers, body, new ConnectionFactory() );
+        this( url, method, headers, body, new ConnectionFactory(), new Handler() );
     }
 
-    public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body, IConnectionFactory factory ) {
+    public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body, IConnectionFactory factory, Handler handler ) {
         this.url = url;
         this.headers = headers;
         this.method = method;
         this.body = body;
         this.connectionFactory = factory;
+        this.handler = handler;
     }
 
     private void processRestResponse(RestResponse restResponse) {
@@ -128,15 +131,25 @@ public class RestFetcher {
         return responseHeaders;
     }
 
-    private void sendSuccess(RestResponse restResponse) {
+    private void sendSuccess( final RestResponse restResponse) {
         if (onFetchSuccessListener != null) {
-            onFetchSuccessListener.onFetchSuccess( restResponse );
+            handler.post( new Runnable() {
+                @Override
+                public void run() {
+                    onFetchSuccessListener.onFetchSuccess( restResponse );
+                }
+            } );
         }
     }
 
-    private void sendError(RestError error) {
+    private void sendError( final RestError error) {
         if (onFetchErrorListener != null) {
-            onFetchErrorListener.onFetchError( error );
+            handler.post( new Runnable() {
+                @Override
+                public void run() {
+                    onFetchErrorListener.onFetchError( error );
+                }
+            } );
         }
     }
 
