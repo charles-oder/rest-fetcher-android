@@ -1,7 +1,5 @@
 package us.oder.restfetcher;
 
-import android.os.Handler;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,7 +58,6 @@ public class RestFetcherTest {
     private int lastResponseCode;
     private String lastResponseBody;
     private Map<String, String> lastResponseHeaders;
-    private Map<java.lang.String, List<String>> mockResponseHeaders;
 
     class MockConnectionFactory implements RestFetcher.IConnectionFactory{
         public String url = "";
@@ -75,7 +72,7 @@ public class RestFetcherTest {
     @Before
     public void setup() throws IOException {
         MockitoAnnotations.initMocks( this );
-        mockResponseHeaders = new HashMap<>();
+        Map<String, List<String>> mockResponseHeaders = new HashMap<>();
         List<String> headerValue1 = new ArrayList<>();
         headerValue1.add( "value" );
         mockResponseHeaders.put( "key1", headerValue1 );
@@ -240,8 +237,6 @@ public class RestFetcherTest {
     public void fetchSuccessInvokesCallback() throws IOException {
         mockResponseBody = "{\"cracker\":\"monkey\"}";
         when(mockHttpURLConnection.getInputStream() ).thenReturn( getMockInputStream( mockResponseBody ) );
-        final Map<String, String> expectedResponseHeaders = new HashMap<>();
-        expectedResponseHeaders.put("crackers", "monkey");
 
         RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
@@ -278,9 +273,6 @@ public class RestFetcherTest {
         mockResponseBody = "{\"cracker\":\"monkey\"}";
         when(mockHttpURLConnection.getInputStream()).thenReturn( getMockInputStream( mockResponseBody ) );
         when(mockHttpURLConnection.getResponseCode()).thenReturn( 400 );
-
-
-
         RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
         fetcher.onFetchErrorListener = new RestFetcher.OnFetchErrorListener() {
             @Override
@@ -289,7 +281,9 @@ public class RestFetcherTest {
                 lastResponseBody = error.reason;
             }
         };
+
         fetcher.fetch();
+
         verify(mockHttpURLConnection ).setRequestMethod( "GET" );
         verify(mockHttpURLConnection ).setRequestProperty( "sample", "header" );
         assertEquals( "http://google.com", mockConnectionFactory.url );
@@ -309,7 +303,9 @@ public class RestFetcherTest {
                 semaphore.release();
             }
         };
+
         restFetcher.fetchAsync();
+
         semaphore.acquire();
         assertTrue(fetched);
     }
