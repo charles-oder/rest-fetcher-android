@@ -242,8 +242,6 @@ public class RestFetcherTest {
         final Map<String, String> expectedResponseHeaders = new HashMap<>();
         expectedResponseHeaders.put("crackers", "monkey");
 
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory, handler );
-        restFetcher.onFetchSuccessListener = mockOnFetchSuccessListener;
         RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
@@ -296,24 +294,12 @@ public class RestFetcherTest {
         assertEquals( "http://google.com", mockConnectionFactory.url );
         assertEquals( 400, lastResponseCode );
         assertEquals( mockResponseBody, lastResponseBody );
-//        HttpResponse expectedResponse = new BasicHttpResponse(new ProtocolVersion("http", 1, 1), 400, "BAD_REQUEST");
-//        expectedResponse.setHeader("crackers", "monkey");
-//        BasicHttpEntity entity = new BasicHttpEntity();
-//        InputStream stream = new ByteArrayInputStream(expectedResponseBody.getBytes("UTF-8"));
-//        entity.setContent(stream);
-//        expectedResponse.setEntity(entity);
-//
-//        when(mockHttpClient.execute(any(HttpRequestBase.class))).thenReturn(expectedResponse);
-//
-//        RestFetcher.client = mockHttpClient;
-
     }
 
     @Test
     public void fetchAsynchPerformsHttpRequest() throws IOException, InterruptedException {
         RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body);
         final Semaphore semaphore = new Semaphore(0);
-//        RestFetcher.client = mockHttpClient;
         fetched = false;
         restFetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
@@ -322,7 +308,6 @@ public class RestFetcherTest {
                 semaphore.release();
             }
         };
-//        when(mockHttpClient.execute(any(HttpRequestBase.class))).thenReturn(new BasicHttpResponse(new ProtocolVersion("http", 1, 1), 200, ""));
         restFetcher.fetchAsync();
         semaphore.acquire();
         assertTrue(fetched);
