@@ -57,9 +57,6 @@ public class RestFetcherTest {
     @Mock
     OutputStream mockOutputStream;
 
-
-    private Handler handler = new Handler();
-
     private int lastResponseCode;
     private String lastResponseBody;
     private Map<String, String> lastResponseHeaders;
@@ -112,7 +109,7 @@ public class RestFetcherTest {
 
     @Test
     public void makeGetRequest() throws IOException {
-        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
+        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
         mockResponseBody = "{\"cracker\":\"monkey\"}";
         when(mockHttpURLConnection.getInputStream()).thenReturn( getMockInputStream( mockResponseBody ) );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
@@ -138,7 +135,7 @@ public class RestFetcherTest {
     @Test
     public void makePostRequest() throws Exception {
         body = "{\"thing\":\"one\"}";
-        RestFetcher fetcher = new RestFetcher(url, RestMethod.POST, headers, body, mockConnectionFactory, handler );
+        RestFetcher fetcher = new RestFetcher(url, RestMethod.POST, headers, body, mockConnectionFactory );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -166,7 +163,7 @@ public class RestFetcherTest {
     @Test
     public void makePutRequest() throws Exception {
         body = "{\"thing\":\"one\"}";
-        RestFetcher fetcher = new RestFetcher(url, RestMethod.PUT, headers, body, mockConnectionFactory, handler );
+        RestFetcher fetcher = new RestFetcher(url, RestMethod.PUT, headers, body, mockConnectionFactory );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -193,7 +190,7 @@ public class RestFetcherTest {
 
     @Test
     public void makeDeleteRequest() throws Exception {
-        RestFetcher fetcher = new RestFetcher(url, RestMethod.DELETE, headers, body, mockConnectionFactory, handler );
+        RestFetcher fetcher = new RestFetcher(url, RestMethod.DELETE, headers, body, mockConnectionFactory );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -217,7 +214,9 @@ public class RestFetcherTest {
 
     @Test
     public void fetchErrorInvokesCallback() throws IOException {
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory, handler );
+        final String expectedReason = "Could not reach server";
+        final int expectedCode = 404;
+        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory );
         restFetcher.onFetchErrorListener = mockOnFetchErrorListener;
         when(mockHttpURLConnection.getInputStream()).thenThrow(new IOException());
 
@@ -225,7 +224,9 @@ public class RestFetcherTest {
             @Override
             public boolean matches(Object argument) {
                 RestError e = (RestError)argument;
-                return (e.reason.equals("NOT FOUND") && e.code == 404);
+                assertEquals( expectedCode, e.code );
+                assertEquals( expectedReason, e.reason );
+                return (e.reason.equals(expectedReason) && e.code == expectedCode);
             }
         };
 
@@ -238,11 +239,11 @@ public class RestFetcherTest {
     @Test
     public void fetchSuccessInvokesCallback() throws IOException {
         mockResponseBody = "{\"cracker\":\"monkey\"}";
-        when(mockHttpURLConnection.getInputStream()).thenReturn( getMockInputStream( mockResponseBody ) );
+        when(mockHttpURLConnection.getInputStream() ).thenReturn( getMockInputStream( mockResponseBody ) );
         final Map<String, String> expectedResponseHeaders = new HashMap<>();
         expectedResponseHeaders.put("crackers", "monkey");
 
-        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
+        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
         fetcher.onFetchSuccessListener = new RestFetcher.OnFetchSuccessListener() {
             @Override
             public void onFetchSuccess( RestResponse response ) {
@@ -266,7 +267,7 @@ public class RestFetcherTest {
 
     @Test
     public void fetchErrorDoesNotBombWithNoErrorListener() throws IOException {
-        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory, new Handler());
+        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory);
         when(mockHttpURLConnection.getInputStream()).thenThrow(new IOException());
 
         restFetcher.fetch();  // No exception expected
@@ -280,7 +281,7 @@ public class RestFetcherTest {
 
 
 
-        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory, handler );
+        RestFetcher fetcher = new RestFetcher( "http://google.com", RestMethod.GET, headers, mockResponseBody, mockConnectionFactory );
         fetcher.onFetchErrorListener = new RestFetcher.OnFetchErrorListener() {
             @Override
             public void onFetchError( RestError error ) {

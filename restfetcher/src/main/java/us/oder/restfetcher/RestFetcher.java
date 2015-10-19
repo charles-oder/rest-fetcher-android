@@ -1,7 +1,6 @@
 package us.oder.restfetcher;
 
 import android.os.AsyncTask;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -25,7 +24,6 @@ public class RestFetcher {
     private static final String TAG = RestFetcher.class.getSimpleName();
 
     private final IConnectionFactory connectionFactory;
-    private final Handler handler;
 
     private String url;
     private Map<String, String> headers;
@@ -59,16 +57,15 @@ public class RestFetcher {
     }
 
     public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body ) {
-        this( url, method, headers, body, new ConnectionFactory(), new Handler() );
+        this( url, method, headers, body, new ConnectionFactory() );
     }
 
-    public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body, IConnectionFactory factory, Handler handler ) {
+    public RestFetcher( String url, RestMethod method, Map<String, String> headers, String body, IConnectionFactory factory ) {
         this.url = url;
         this.headers = headers;
         this.method = method;
         this.body = body;
         this.connectionFactory = factory;
-        this.handler = handler;
     }
 
     private void processRestResponse(RestResponse restResponse) {
@@ -87,7 +84,7 @@ public class RestFetcher {
         }
     }
 
-    private RestResponse performRequest() {
+    private RestResponse performRequest() throws IOException {
         logRequest();
         RestResponse output = null;
         HttpURLConnection conn = null;
@@ -106,7 +103,7 @@ public class RestFetcher {
 
             output = new RestResponse(conn.getResponseCode(), responseHeaders, body);
         } catch (IOException e) {
-            sendError( new RestError( 404, "Could not reach server" ) );
+            throw e;
         } finally {
             if ( conn != null ) {
                 conn.disconnect();
@@ -133,23 +130,13 @@ public class RestFetcher {
 
     private void sendSuccess( final RestResponse restResponse) {
         if (onFetchSuccessListener != null) {
-            handler.post( new Runnable() {
-                @Override
-                public void run() {
-                    onFetchSuccessListener.onFetchSuccess( restResponse );
-                }
-            } );
+            onFetchSuccessListener.onFetchSuccess( restResponse );
         }
     }
 
     private void sendError( final RestError error) {
         if (onFetchErrorListener != null) {
-            handler.post( new Runnable() {
-                @Override
-                public void run() {
-                    onFetchErrorListener.onFetchError( error );
-                }
-            } );
+            onFetchErrorListener.onFetchError( error );
         }
     }
 
@@ -220,7 +207,12 @@ public class RestFetcher {
     }
 
     public void fetch() {
-        RestResponse restResponse = performRequest();
+        RestResponse restResponse;
+        try {
+            restResponse = performRequest();
+        } catch ( IOException e ) {
+            restResponse = getServerConnectionErrorResponse();
+        }
         processRestResponse( restResponse );
 
     }
@@ -230,7 +222,11 @@ public class RestFetcher {
 
             @Override
             protected RestResponse doInBackground(Void... params) {
-                return performRequest();
+                try {
+                    return performRequest();
+                } catch ( IOException e ) {
+                    return getServerConnectionErrorResponse();
+                }
             }
 
             @Override
@@ -238,6 +234,11 @@ public class RestFetcher {
                 processRestResponse(restResponse);
             }
         }.execute();
+    }
+
+    @NonNull
+    private RestResponse getServerConnectionErrorResponse() {
+        return new RestResponse( 404, new HashMap<String, String>(), "Could not reach server" );
     }
 
     public static String convertInputStreamToString( InputStream inputStream ) throws IOException {
