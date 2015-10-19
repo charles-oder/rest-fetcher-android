@@ -20,7 +20,7 @@ import us.oder.restfetcher.util.JsonScrubber;
 
 public class RestFetcher {
 
-    private static final String[] FIELDS_TO_SCRUB = new String[]{"password", "username"};
+    private static String[] fieldsToScrub = new String[]{"password", "username"};
     private static final String TAG = RestFetcher.class.getSimpleName();
 
     private final IConnectionFactory connectionFactory;
@@ -66,6 +66,10 @@ public class RestFetcher {
         this.method = method;
         this.body = body;
         this.connectionFactory = factory;
+    }
+
+    public static void setFieldsToScrub( String[] fieldsToScrub ) {
+        RestFetcher.fieldsToScrub = fieldsToScrub;
     }
 
     private void processRestResponse(RestResponse restResponse) {
@@ -187,7 +191,7 @@ public class RestFetcher {
             headerLog += " | " + key + " : " + headers.get( key );
         }
         Log.d( TAG, headerLog );
-        JsonScrubber scrubber = new JsonScrubber(FIELDS_TO_SCRUB);
+        JsonScrubber scrubber = new JsonScrubber( fieldsToScrub );
         Log.d( TAG, "Request Body: " + scrubber.scrub( body ) );
     }
 
