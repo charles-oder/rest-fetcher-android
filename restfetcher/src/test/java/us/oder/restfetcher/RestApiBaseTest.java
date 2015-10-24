@@ -1,5 +1,7 @@
 package us.oder.restfetcher;
 
+import junit.framework.Assert;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -51,6 +53,10 @@ public class RestApiBaseTest {
     class ConcreteApiRequest extends RestApiBase.Request<RestApiBase.Response> {
 
         public Map<String, String> queryArgs = new HashMap<>();
+
+        public ConcreteApiRequest() {
+            super();
+        }
 
         public ConcreteApiRequest(RestApiBase.IRestFetcherFactory restFetcherFactory) {
             super(restFetcherFactory);
@@ -234,6 +240,28 @@ public class RestApiBaseTest {
         };
         assertEquals(restResponse, concreteResponse.restResponse);
         assertTrue( processCalled );
+    }
+
+    @Test
+    public void realRestFetcherFactoryBuildsRestFetcherCorrectly() {
+        testObject = new ConcreteApiRequest();
+        String expectedUrl = "http://google.com/api";
+        RestMethod expectedMethod = RestMethod.GET;
+        Map<String, String> expectedHeaders = new HashMap<>();
+        expectedHeaders.put("Content-Type", "application/json");
+        expectedHeaders.put( "Accept", "application/json; version=1" );
+        String expectedBody = "";
+
+
+        testObject.prepare();
+
+        RestFetcher fetcher = testObject.getFetcher();
+        assertEquals( expectedUrl, fetcher.getUrl() );
+        assertEquals( expectedMethod, fetcher.getMethod() );
+        for (String key : expectedHeaders.keySet()) {
+            assertEquals( expectedHeaders.get( key ), fetcher.getHeaders().get( key ) );
+        }
+        assertEquals( expectedBody, fetcher.getBody() );
     }
 
 }
