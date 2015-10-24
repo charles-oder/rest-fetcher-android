@@ -1,5 +1,9 @@
 package us.oder.restfetcher;
 
+import android.support.annotation.NonNull;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,12 +75,23 @@ public class RestApiBase {
             String output = "";
             boolean firstArg = true;
             for (String key : getQueryArguments().keySet()) {
-                output += firstArg ? "?" : "&";
-                output += key;
-                output += "=";
-                output += getQueryArguments().get( key );
-                firstArg = false;
+                try {
+                    output += createQueryArgument( key, firstArg );
+                    firstArg = false;
+                } catch ( UnsupportedEncodingException e ) {
+                    // this should NEVER happen, but if it does, just don't add the argument
+                    e.printStackTrace();
+                }
             }
+            return output;
+        }
+
+        @NonNull
+        private String createQueryArgument( String key, boolean isFirstArg ) throws UnsupportedEncodingException {
+            String output = isFirstArg ? "?" : "&";
+            output += URLEncoder.encode( key, "UTF-8" );
+            output += "=";
+            output += URLEncoder.encode( getQueryArguments().get( key ), "UTF-8" );
             return output;
         }
 

@@ -120,10 +120,10 @@ public class RestApiBaseTest {
         Map<String, String> args = new HashMap<>();
         args.put( "arg3", "value3" );
         args.put( "arg2", "value2" );
-        args.put( "arg1", "value1" );
+        args.put( "arg 1", "value 1" );
         ((ConcreteApiRequest)testObject).queryArgs = args;
 
-        String expectedUrl = "http://google.com/api?arg3=value3&arg2=value2&arg1=value1";
+        String expectedUrl = "http://google.com/api?arg3=value3&arg2=value2&arg+1=value+1";
         RestMethod expectedMethod = RestMethod.GET;
         Map<String, String> expectedHeaders = new HashMap<>();
         expectedHeaders.put("Content-Type", "application/json");
