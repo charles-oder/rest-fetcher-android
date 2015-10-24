@@ -50,6 +50,8 @@ public class RestApiBaseTest {
 
     class ConcreteApiRequest extends RestApiBase.Request<RestApiBase.Response> {
 
+        public Map<String, String> queryArgs = new HashMap<>();
+
         public ConcreteApiRequest(RestApiBase.IRestFetcherFactory restFetcherFactory) {
             super(restFetcherFactory);
         }
@@ -62,6 +64,13 @@ public class RestApiBaseTest {
         @Override
         protected String getApiRoute() {
             return "/api";
+        }
+
+        @Override
+        protected Map<String, String> getQueryArguments() {
+            Map<String, String> args = super.getQueryArguments();
+            args.putAll( queryArgs );
+            return args;
         }
     }
 
@@ -87,9 +96,34 @@ public class RestApiBaseTest {
 
 
     @Test
-    public void prepareSetsUpRestFetcherCorrectly () {
+    public void prepareSetsUpRestFetcherCorrectly() {
 
         String expectedUrl = "http://google.com/api";
+        RestMethod expectedMethod = RestMethod.GET;
+        Map<String, String> expectedHeaders = new HashMap<>();
+        expectedHeaders.put("Content-Type", "application/json");
+        expectedHeaders.put( "Accept", "application/json; version=1" );
+        String expectedBody = "";
+
+        testObject.prepare();
+
+        assertEquals( expectedUrl, lastRequestUrl );
+        assertEquals( expectedMethod, lastRequestMethod );
+        for (String key : expectedHeaders.keySet()) {
+            assertEquals(expectedHeaders.get(key), lastRequestHeaders.get(key));
+        }
+        assertEquals( expectedBody, lastRequestBody );
+    }
+
+    @Test
+    public void prepareSetsUpRestFetcherCorrectlyWithQueryArguments() {
+        Map<String, String> args = new HashMap<>();
+        args.put( "arg3", "value3" );
+        args.put( "arg2", "value2" );
+        args.put( "arg1", "value1" );
+        ((ConcreteApiRequest)testObject).queryArgs = args;
+
+        String expectedUrl = "http://google.com/api?arg3=value3&arg2=value2&arg1=value1";
         RestMethod expectedMethod = RestMethod.GET;
         Map<String, String> expectedHeaders = new HashMap<>();
         expectedHeaders.put("Content-Type", "application/json");

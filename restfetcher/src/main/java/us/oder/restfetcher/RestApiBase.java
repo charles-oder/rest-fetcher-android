@@ -64,7 +64,20 @@ public class RestApiBase {
         }
 
         protected String getApiResource() {
-            return getApiBaseAddress() + getApiRoute();
+            return getApiBaseAddress() + getApiRoute() + getQueryString();
+        }
+
+        private String getQueryString() {
+            String output = "";
+            boolean firstArg = true;
+            for (String key : getQueryArguments().keySet()) {
+                output += firstArg ? "?" : "&";
+                output += key;
+                output += "=";
+                output += getQueryArguments().get( key );
+                firstArg = false;
+            }
+            return output;
         }
 
         protected RestMethod getRestMethod() {
@@ -116,6 +129,10 @@ public class RestApiBase {
                 T apiResponse = createApiResponse( response );
                 onApiSuccessListener.onApiSuccess( apiResponse );
             }
+        }
+
+        protected Map<String, String> getQueryArguments() {
+            return new HashMap<>();
         }
     }
 
