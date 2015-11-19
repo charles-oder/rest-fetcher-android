@@ -82,7 +82,7 @@ public class RestFetcher {
 
     private void sendResponse(RestResponse restResponse) {
         if (restResponse.code > 199 && restResponse.code < 300) {
-            sendSuccess( restResponse );
+            sendSuccess(restResponse);
         } else {
             sendError( new RestError( restResponse.code, restResponse.body ) );
         }
@@ -95,15 +95,10 @@ public class RestFetcher {
         try {
 
             conn = establishConnection();
+            
+            String body = getBodyString(conn);
 
-
-            String body = "";
-            InputStream is = conn.getInputStream();
-            if (is != null) {
-                body = convertInputStreamToString(is);
-            }
-
-            Map<String, String> responseHeaders = extractResponseHeaders( conn );
+            Map<String, String> responseHeaders = extractResponseHeaders(conn);
 
             output = new RestResponse(conn.getResponseCode(), responseHeaders, body);
         } catch (IOException e) {
@@ -115,6 +110,20 @@ public class RestFetcher {
         }
         logResponse( output );
         return output;
+    }
+
+    @NonNull
+    private String getBodyString(HttpURLConnection conn) {
+        String body = "";
+        try {
+            InputStream is = conn.getInputStream();
+            if (is != null) {
+                body = convertInputStreamToString(is);
+            }
+        } catch (IOException e) {
+            // Just don't populate the body
+        }
+        return body;
     }
 
     @NonNull

@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.robolectric.RobolectricTestRunner;
@@ -54,6 +55,9 @@ public class RestFetcherTest {
 
     @Mock
     OutputStream mockOutputStream;
+
+    @Captor
+    private ArgumentCaptor<RestError> restErrorCaptor;
 
     private int lastResponseCode;
     private String lastResponseBody;
@@ -144,13 +148,13 @@ public class RestFetcherTest {
         };
         fetcher.fetch();
         verify(mockHttpURLConnection).setRequestMethod( "POST" );
-        verify(mockHttpURLConnection).setRequestProperty( "sample", "header" );
-        assertEquals( "http://google.com", mockConnectionFactory.url );
-        assertEquals( 200, lastResponseCode );
+        verify(mockHttpURLConnection).setRequestProperty("sample", "header");
+        assertEquals("http://google.com", mockConnectionFactory.url);
+        assertEquals(200, lastResponseCode);
         assertEquals( "", lastResponseBody );
         assertEquals( 2, lastResponseHeaders.size() );
         assertEquals( "value", lastResponseHeaders.get( "key1" ) );
-        assertEquals( "value;another value", lastResponseHeaders.get( "key2" ) );
+        assertEquals( "value;another value", lastResponseHeaders.get("key2") );
 
         ArgumentCaptor<byte[]> captor = ArgumentCaptor.forClass( byte[].class );
         verify(mockOutputStream).write(captor.capture(), anyInt(), anyInt());
@@ -198,14 +202,14 @@ public class RestFetcherTest {
             }
         };
         fetcher.fetch();
-        verify(mockHttpURLConnection).setRequestMethod( "DELETE" );
-        verify(mockHttpURLConnection).setRequestProperty( "sample", "header" );
+        verify(mockHttpURLConnection).setRequestMethod("DELETE");
+        verify(mockHttpURLConnection).setRequestProperty("sample", "header");
         assertEquals( "http://google.com", mockConnectionFactory.url );
         assertEquals( 200, lastResponseCode );
         assertEquals( "", lastResponseBody );
         assertEquals( 2, lastResponseHeaders.size() );
-        assertEquals( "value", lastResponseHeaders.get( "key1" ) );
-        assertEquals( "value;another value", lastResponseHeaders.get( "key2" ) );
+        assertEquals("value", lastResponseHeaders.get("key1"));
+        assertEquals( "value;another value", lastResponseHeaders.get("key2") );
 
     }
 
@@ -215,22 +219,13 @@ public class RestFetcherTest {
         final int expectedCode = 404;
         RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory );
         restFetcher.onFetchErrorListener = mockOnFetchErrorListener;
-        when(mockHttpURLConnection.getInputStream()).thenThrow(new IOException());
-
-        ArgumentMatcher<RestError> errorMatcher = new ArgumentMatcher<RestError>() {
-            @Override
-            public boolean matches(Object argument) {
-                RestError e = (RestError)argument;
-                assertEquals( expectedCode, e.code );
-                assertEquals( expectedReason, e.reason );
-                return (e.reason.equals(expectedReason) && e.code == expectedCode);
-            }
-        };
+        when(mockHttpURLConnection.getResponseCode()).thenThrow(new IOException());
 
         restFetcher.fetch();
 
-
-        verify(mockOnFetchErrorListener).onFetchError(argThat(errorMatcher));
+        verify(mockOnFetchErrorListener).onFetchError(restErrorCaptor.capture());
+        assertEquals(expectedCode, restErrorCaptor.getValue().code);
+        assertEquals(expectedReason, restErrorCaptor.getValue().reason);
     }
 
     @Test
@@ -254,9 +249,9 @@ public class RestFetcherTest {
         assertEquals( "http://google.com", mockConnectionFactory.url );
         assertEquals( 200, lastResponseCode );
         assertEquals( "{\"cracker\":\"monkey\"}", lastResponseBody );
-        assertEquals( 2, lastResponseHeaders.size() );
-        assertEquals( "value", lastResponseHeaders.get( "key1" ) );
-        assertEquals( "value;another value", lastResponseHeaders.get( "key2" ) );
+        assertEquals(2, lastResponseHeaders.size());
+        assertEquals("value", lastResponseHeaders.get("key1"));
+        assertEquals("value;another value", lastResponseHeaders.get("key2"));
 
     }
 
@@ -287,8 +282,8 @@ public class RestFetcherTest {
         verify(mockHttpURLConnection ).setRequestMethod( "GET" );
         verify(mockHttpURLConnection ).setRequestProperty( "sample", "header" );
         assertEquals( "http://google.com", mockConnectionFactory.url );
-        assertEquals( 400, lastResponseCode );
-        assertEquals( mockResponseBody, lastResponseBody );
+        assertEquals(400, lastResponseCode);
+        assertEquals(mockResponseBody, lastResponseBody);
     }
 
     @Test
@@ -333,5 +328,23 @@ public class RestFetcherTest {
             exceptionThrown = true;
         }
         assertTrue(exceptionThrown);
+    }
+
+    @Test
+    public void inputStreamExceptionPreservesResponseCode() throws IOException {
+        final String expectedReason = "";
+        final int expectedCode = 500;
+        RestFetcher restFetcher = new RestFetcher(url, RestMethod.GET, headers, body, mockConnectionFactory );
+        restFetcher.onFetchErrorListener = mockOnFetchErrorListener;
+        when(mockHttpURLConnection.getInputStream()).thenThrow(new IOException());
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedCode);
+
+
+        restFetcher.fetch();
+
+
+        verify(mockOnFetchErrorListener).onFetchError(restErrorCaptor.capture());
+        assertEquals(expectedCode, restErrorCaptor.getValue().code);
+        assertEquals(expectedReason, restErrorCaptor.getValue().reason);
     }
 }
